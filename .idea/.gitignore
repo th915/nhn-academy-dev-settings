@@ -6,3 +6,8 @@
 # Datasource local storage ignored files
 /dataSources/
 /dataSources.local.xml
+/checkstyle-idea.xml
+/misc.xml
+/modules.xml
+/nhn-academy-dev-settings.iml
+/vcs.xml
