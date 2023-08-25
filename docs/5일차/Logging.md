@@ -1,0 +1,139 @@
+# Java Logging
+
+### Logging
+- 시스템 동작 시, 시스템의 상태와 작동 정보를 시간 경과에 따라 기록하는 것
+
+- java에서의 Logging 방법은 `System.out.println`, `log4j`, `logback` 등이 있음
+
+## System.out.println()
+- System.out은 표준 출력 작업을 수행하는 메서드를 제공함
+- Logging에도 활용할 수 있다고 생각할 수 있으나, **System.out으로 로그를 남기면 안됨**
+
+### 로깅 시 해당 메서드를 활용할 수 없는 이유는?
+- **에러 발생 시 추적할 수 있는 최소한의 정보가 남지 않음**
+    - 날짜 및 시간, 수준(error, info, debug 등), 발생 위치 등의 정보를 기록하기가 어려움
+- **로그 출력 레벨을 사용할 수 없음**
+    - 로깅 라이브러리를 이용하면 TRACE, DEVUG, INFO, WARN, ERROR 등의 다양한 로그 레벨을 사용할 수 있지만, System.out은 해당 기능을 사용할 수 없음
+- **성능 저하 발생**
+    - System.out.println()에서 사용하는 newLine() 메서드에는 `synchromized` 키워드가 붙어있으므로 해당 메서드는 critical section이 됨. 멀티 쓰레드 환경에서 어떠한 쓰레드가 해당 메서드를 실행하는 도중에는 다른 쓰레드에서 해당 메서드 실행이 불가함. 그러므로 멀티 쓰레드 환경에서 성능 저하가 발생하게 됨
+
+
+## Java Standard Logging
+### java.util.logging.Logger
+- java에 내장되어 있는 로깅용 유틸 클래스
+- java.util.logging 패키지에 속해있음
+- 로그 레벨 지원 
+    - SEVERE > WARNING > INFO > CONFIG > FINE > FINER > FINEST
+    - 로깅을 끄는 OFF, 모든 로깅을 찍는 ALL도 있음
+- 장점
+    - 외부 라이브러리를 사용할 필요가 없음
+- 단점
+    - 다른 라이브러리와 비교 했을 때, 속도가 느림
+    - 타 라이브러리에 비해 기능이 부족함
+    - 커스텀 레벨을 만들 때 메모리 누수가 일어남
+
+Logger 사용 예시 코드
+```java
+import java.util.logging.Logger;
+
+public class MyLogger {
+    private final static Logger logger = Logger.getLogger("myLogger");
+
+    public static Logger getLogger() {
+        logger.setLevel(Level.INFO);
+        return logger;
+    }
+}
+```
+```java
+public class LoggerTest {
+    public static int sum(int a, int b) {
+        MyLogger.getLogger().info("덧셈 수행 : " + a + " + " + b);
+        return a+b;
+    }
+
+    public static double divide(int a, int b) {
+        if (b == 0) {
+            MyLogger.getLogger().warning("나눗셈 에러 발생!");
+            throw new ArithmeticException("0으로 나눌 수 없습니다.");
+        }
+        return a/b;
+    }
+
+    public static void main(String[] args) {
+        int a = 1;
+        int b = 2;
+        System.out.println(sum(a, b));
+        System.out.println(divide(a, 0));
+    }
+}
+```
+실행 결과
+```bash
+8월 25, 2023 4:25:20 오후 exam.LoggerTest sum
+정보: 덧셈 수행 : 1 + 2
+8월 25, 2023 4:25:20 오후 exam.LoggerTest divide
+경고: 나눗셈 에러 발생!
+Exception in thread "main" java.lang.ArithmeticException: 0으로 나눌 수 없습니다.
+	at exam.LoggerTest.divide(LoggerTest2.java:18)
+	at exam.LoggerTest.main(LoggerTest2.java:27)
+3
+```
+
+## Logback
+- 다양한 Logging framework 중 하나로, log4j보다 향상된 기능을 갖고 있으며 가장 널리 사용되고 있음
+- 로그 레벨
+    - error > warn > info > debug > trace
+
+Logback 설정 및 사용
+1. jar파일로 의존성 추가
+<br>
+ `file` > `Project Structure...`(`command + ;`) > Libraries > + 클릭 > `From Maven...`
+ <br>
+ logback-core 입력 후 검색 > 1.2.3버전 선택
+
+ ![Alt text](./image/1.png)
+
+  2. logback.xml 파일 설정
+ ```xml
+ <configuration>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="debug">
+        <appender-ref ref="STDOUT" />
+    </root>
+</configuration>
+ ```
+
+ 3. Log를 출력하고 싶은 곳에 log 찍기
+```java
+public class MyLogback {
+    private static final Logger logger = LoggerFactory.getLogger(MyLogback.class);
+
+    public static int sum(int a, int b) {
+        logger.trace("테스트 용 = {}", a);
+        logger.info("덧셈 연산 수행 : {} + {}", a, b);
+        return a+b;
+    }
+
+    public static int divide(int a, int b) {
+        if(b == 0) {
+            logger.warn("덧셈 연산 실패..");
+            throw new ArithmeticException("0으로 나눌 수 없습니다.");
+        }
+        return a/b;
+    }
+
+    public static void main(String[] args) {
+        int a = 1;
+        int b = 2;
+
+        System.out.println(sum(a, b));
+        System.out.println(divide(a, 0));
+    }
+}
+```
