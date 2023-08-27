@@ -15,7 +15,7 @@
 - **로그 출력 레벨을 사용할 수 없음**
     - 로깅 라이브러리를 이용하면 TRACE, DEVUG, INFO, WARN, ERROR 등의 다양한 로그 레벨을 사용할 수 있지만, System.out은 해당 기능을 사용할 수 없음
 - **성능 저하 발생**
-    - System.out.println()에서 사용하는 newLine() 메서드에는 `synchromized` 키워드가 붙어있으므로 해당 메서드는 critical section이 됨. 멀티 쓰레드 환경에서 어떠한 쓰레드가 해당 메서드를 실행하는 도중에는 다른 쓰레드에서 해당 메서드 실행이 불가함. 그러므로 멀티 쓰레드 환경에서 성능 저하가 발생하게 됨
+    - System.out.println()에서 사용하는 newLine() 메서드에는 `synchronized` 키워드가 붙어있으므로 해당 메서드는 critical section이 됨. 멀티 쓰레드 환경에서 어떠한 쓰레드가 해당 메서드를 실행하는 도중에는 다른 쓰레드에서 해당 메서드 실행이 불가함. 그러므로 멀티 쓰레드 환경에서 성능 저하가 발생하게 됨
 
 
 ## Java Standard Logging
@@ -95,16 +95,31 @@ Logback 설정 및 사용
  ![Alt text](./image/1.png)
 
   2. logback.xml 파일 설정
+  - logback을 이용하면 appender 별로 로그 레벨을 설정해주거나, 일정 기간이 지난 로그 파일을 지우거나, 로그의 용량을 제한하는 등의 다양한 기능을 사용할 수 있음
+  - 
  ```xml
- <configuration>
+<configuration>
+
+    <!-- 파일로 출력 -->
+    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+        <file>myApp.log</file>
+
+        <encoder>
+            <pattern>%date [%thread] %level %logger{10} [%file:%line] - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 표준 출력 -->
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
 
+    <!-- debug 레벨 설정 -->
     <root level="debug">
-        <appender-ref ref="STDOUT" />
+        <appender-ref ref="FILE"/>
+        <appender-ref ref="STDOUT"/>
     </root>
 </configuration>
  ```
@@ -115,14 +130,14 @@ public class MyLogback {
     private static final Logger logger = LoggerFactory.getLogger(MyLogback.class);
 
     public static int sum(int a, int b) {
-        logger.trace("테스트 용 = {}", a);
+        logger.trace("테스트 용 = {}, {}", a, b);
         logger.info("덧셈 연산 수행 : {} + {}", a, b);
         return a+b;
     }
 
     public static int divide(int a, int b) {
         if(b == 0) {
-            logger.warn("덧셈 연산 실패..");
+            logger.warn("덧셈 연산 실패.. 0으로 나눌 수 없음");
             throw new ArithmeticException("0으로 나눌 수 없습니다.");
         }
         return a/b;
